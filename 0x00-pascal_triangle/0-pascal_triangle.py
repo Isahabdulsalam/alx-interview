@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """Pascal's Triangle"""
 
+
 def pascal_triangle(n):
     """
     A function that returns a list
@@ -23,7 +24,9 @@ def pascal_triangle(n):
                 if j == 0 or j == i:
                     cur_row.append(1)
                 else:
-                    cur_row.append(pascal_tri[i - 1][j - 1] + pascal_tri[i - 1][j])
+                    cur_row.append(
+                        pascal_tri[i - 1][j - 1] + pascal_tri[i - 1][j]
+                    )
             pascal_tri.append(cur_row)
 
     return pascal_tri
