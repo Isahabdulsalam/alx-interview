@@ -1,40 +1,77 @@
 #!/usr/bin/python3
-import sys
-import signal
+"""A script for parsing"""
 import re
 
-log_pattern = re.compile(r'(\S+) - \[(.*?)\] "GET /projects/260 HTTP/1.1" (\d{3}) (\d+)')
-status_counts = {}
-total_size = 0
-line_count = 0
 
-def print_stats():
-    print("Total file size: {}".format(total_size))
-    for status_code in sorted(status_counts.keys()):
-        print("{}: {}".format(status_code, status_counts[status_code]))
+def extract_input(input_line):
+    """Extracts sections of the log"""
+    fp = (
+        r'\s*(?P<ip>\S+)\s*',
+        r'\s*\[(?P<date>\d+\-\d+\-\d+ \d+:\d+:\d+\.\d+)\]',
+        r'\s*"(?P<request>[^"]*)"\s*',
+        r'\s*(?P<status_code>\S+)',
+        r'\s*(?P<file_size>\d+)'
+    )
+    info = {
+        'status_code': 0,
+        'file_size': 0,
+    }
+    log_fmt = '{}\\-{}{}{}{}\\s*'.format(fp[0], fp[1], fp[2], fp[3], fp[4])
+    resp_match = re.fullmatch(log_fmt, input_line)
+    if resp_match is not None:
+        status_code = resp_match.group('status_code')
+        file_size = int(resp_match.group('file_size'))
+        info['status_code'] = status_code
+        info['file_size'] = file_size
+    return info
 
-def signal_handler(sig, frame):
-    print_stats()
-    sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
+def print_statistics(total_file_size, status_codes_stats):
+    """Prints the accumulated log stats"""
+    print('File size: {:d}'.format(total_file_size), flush=True)
+    for status_code in sorted(status_codes_stats.keys()):
+        num = status_codes_stats.get(status_code, 0)
+        if num > 0:
+            print('{:s}: {:d}'.format(status_code, num), flush=True)
 
-for line in sys.stdin:
+
+def update_metrics(line, total_file_size, status_codes_stats):
+    """Updates the metrics from a given HTTP"""
+    line_info = extract_input(line)
+    status_code = line_info.get('status_code', '0')
+    if status_code in status_codes_stats.keys():
+        status_codes_stats[status_code] += 1
+    return total_file_size + line_info['file_size']
+
+
+def run():
+    """Starts the log"""
+    line_num = 0
+    total_file_size = 0
+    status_codes_stats = {
+        '200': 0,
+        '301': 0,
+        '400': 0,
+        '401': 0,
+        '403': 0,
+        '404': 0,
+        '405': 0,
+        '500': 0,
+    }
     try:
-        match = log_pattern.match(line)
-        if match:
-            ip, date, status_code, file_size = match.groups()
-            status_code = int(status_code)
-            file_size = int(file_size)
+        while True:
+            line = input()
+            total_file_size = update_metrics(
+                line,
+                total_file_size,
+                status_codes_stats,
+            )
+            line_num += 1
+            if line_num % 10 == 0:
+                print_statistics(total_file_size, status_codes_stats)
+    except (KeyboardInterrupt, EOFError):
+        print_statistics(total_file_size, status_codes_stats)
 
-            total_size += file_size
-            if status_code in status_counts:
-                status_counts[status_code] += 1
-            else:
-                status_counts[status_code] = 1
-            line_count += 1
 
-        if line_count % 10 == 0:
-            print_stats()
-    except Exception:
-        continue
+if __name__ == '__main__':
+    run()
