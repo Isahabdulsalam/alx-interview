@@ -3,6 +3,7 @@
 A module to determine if a given data set represents a valid UTF-8 encoding.
 """
 
+
 def validUTF8(data):
     """
     Check if a list of integers represents a valid UTF-8 encoding.
@@ -35,7 +36,7 @@ def validUTF8(data):
         else:
             if not (byte & mask1 and not (byte & mask2)):
                 return False
-        
+
         num_bytes -= 1
         
     return num_bytes == 0
