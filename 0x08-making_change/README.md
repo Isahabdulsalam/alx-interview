@@ -1,4 +1,4 @@
-# Coin Change Problem
+# 0x08-making_change
 
 ## 0. Change Comes From Within
 
